@@ -1024,13 +1024,6 @@ export default function TaskManager() {
     createTarefa.mutate(tarefa);
   }, [createTarefa]);
 
-  useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
-    setSidebarOpen(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setSidebarOpen(e.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
-  }, []);
 
   const isAllView = selectedListaId === null;
 
