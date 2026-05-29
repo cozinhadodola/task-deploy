@@ -36,8 +36,10 @@ import { useAtualizacoes, useCreateAtualizacao, useDeleteAtualizacao } from "@/h
 import RecurrencePanel, { recurrenceLabel } from "@/components/RecurrencePanel";
 import { Constants } from "@/integrations/supabase/types";
 import ListaPermissoesModal from "@/components/ListaPermissoesModal";
+import AdminPanel from "@/components/AdminPanel";
 import { useCurrentUser, useListaOwner } from "@/hooks/useListaPermissoes";
-import { Share2, LogOut } from "lucide-react";
+import { useIsAdmin } from "@/hooks/useAdmin";
+import { Share2, LogOut, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const STATUS_OPTIONS = Constants.public.Enums.status_type;
@@ -996,6 +998,9 @@ export default function TaskManager() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showResponsaveis, setShowResponsaveis] = useState(false);
   const [showNewListInput, setShowNewListInput] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+
+  const { data: isAdmin } = useIsAdmin();
 
   // Build recorrencia map once (eliminates N+1 queries)
   const recorrenciaMap = useMemo(() => {
@@ -1342,13 +1347,25 @@ export default function TaskManager() {
               <X className="h-3 w-3" />
             </button>
           )}
-          <button
-            onClick={() => supabase.auth.signOut()}
-            title="Sair"
-            className="ml-auto text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/60 transition-colors"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
+          <div className="ml-auto flex items-center gap-1">
+            {isAdmin && (
+              <button
+                onClick={() => setShowAdminPanel(true)}
+                title="Painel Admin"
+                className="text-muted-foreground hover:text-primary p-1.5 rounded-lg hover:bg-muted/60 transition-colors"
+              >
+                <ShieldCheck className="h-4 w-4" />
+              </button>
+            )}
+            <button
+              onClick={() => supabase.auth.signOut()}
+              title="Sair"
+              className="text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/60 transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
+          {showAdminPanel && <AdminPanel onClose={() => setShowAdminPanel(false)} />}
         </header>
 
         <div className="flex-1 p-4 md:p-6 overflow-auto">
