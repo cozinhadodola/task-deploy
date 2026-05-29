@@ -6,7 +6,7 @@ import {
   Draggable,
   type DropResult,
 } from "@hello-pangea/dnd";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -115,25 +115,29 @@ function getNextRecurrenceDate(rec: Recorrencia): string | null {
 
 /* ─── Relative date formatting ─── */
 function formatRelativeDate(dateStr: string): { text: string; isOverdue: boolean; isToday: boolean } {
-  const dueDate = new Date(dateStr + "T00:00:00");
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diffMs = today.getTime() - dueDate.getTime();
+  const dueDate = new Date(dateStr);
+  const dueDateDay = new Date(dueDate); dueDateDay.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const diffMs = today.getTime() - dueDateDay.getTime();
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-  const isOverdue = diffDays > 0;
+  const isOverdue = dueDate < new Date() && diffDays >= 0;
   const isToday = diffDays === 0;
 
-  if (isToday) return { text: "Hoje", isOverdue: false, isToday: true };
-  if (diffDays === 1) return { text: "1 dia atrás", isOverdue: true, isToday: false };
-  if (diffDays === -1) return { text: "Amanhã", isOverdue: false, isToday: false };
-  if (diffDays > 1 && diffDays < 7) return { text: `${diffDays} dias atrás`, isOverdue: true, isToday: false };
-  if (diffDays >= 7 && diffDays < 14) return { text: "1 semana atrás", isOverdue: true, isToday: false };
-  if (diffDays >= 14 && diffDays < 30) return { text: `${Math.floor(diffDays / 7)} semanas atrás`, isOverdue: true, isToday: false };
-  if (diffDays >= 30) return { text: `${Math.floor(diffDays / 30)} mês(es) atrás`, isOverdue: true, isToday: false };
-  if (diffDays < -1 && diffDays > -7) return { text: `em ${Math.abs(diffDays)} dias`, isOverdue: false, isToday: false };
-  if (diffDays <= -7) return { text: dueDate.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }), isOverdue: false, isToday: false };
+  // Show time suffix if not midnight
+  const hasTime = dueDate.getHours() !== 0 || dueDate.getMinutes() !== 0;
+  const timeSuffix = hasTime ? ` ${dueDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : "";
 
-  return { text: dueDate.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }), isOverdue: false, isToday: false };
+  if (isToday) return { text: `Hoje${timeSuffix}`, isOverdue: isOverdue, isToday: true };
+  if (diffDays === 1) return { text: `1 dia atrás${timeSuffix}`, isOverdue: true, isToday: false };
+  if (diffDays === -1) return { text: `Amanhã${timeSuffix}`, isOverdue: false, isToday: false };
+  if (diffDays > 1 && diffDays < 7) return { text: `${diffDays} dias atrás${timeSuffix}`, isOverdue: true, isToday: false };
+  if (diffDays >= 7 && diffDays < 14) return { text: `1 semana atrás${timeSuffix}`, isOverdue: true, isToday: false };
+  if (diffDays >= 14 && diffDays < 30) return { text: `${Math.floor(diffDays / 7)} semanas atrás${timeSuffix}`, isOverdue: true, isToday: false };
+  if (diffDays >= 30) return { text: `${Math.floor(diffDays / 30)} mês(es) atrás${timeSuffix}`, isOverdue: true, isToday: false };
+  if (diffDays < -1 && diffDays > -7) return { text: `em ${Math.abs(diffDays)} dias${timeSuffix}`, isOverdue: false, isToday: false };
+  if (diffDays <= -7) return { text: dueDate.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }) + timeSuffix, isOverdue: false, isToday: false };
+
+  return { text: dueDate.toLocaleDateString("pt-BR", { day: "numeric", month: "short" }) + timeSuffix, isOverdue: false, isToday: false };
 }
 
 /* ─── Debounced Input ─── */
@@ -532,41 +536,64 @@ const TaskItem = memo(function TaskItem({
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="text-muted-foreground text-[11px] font-medium block mb-1">Data de vencimento</label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        className={cn(
-                          "w-full bg-background border border-border rounded-md px-2 py-1.5 text-xs text-left flex items-center gap-1.5 focus:outline-none focus:ring-1 focus:ring-ring",
-                          !task.data_vencimento && "text-muted-foreground"
-                        )}
-                      >
-                        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                        {task.data_vencimento
-                          ? format(parseISO(task.data_vencimento), "dd/MM/yyyy", { locale: ptBR })
-                          : "Selecionar data"}
-                        {task.data_vencimento && (
-                          <span
-                            onClick={(e) => { e.stopPropagation(); onUpdate({ id: task.id, data_vencimento: null }); }}
-                            className="ml-auto text-muted-foreground hover:text-destructive"
-                          >
-                            <X className="h-3 w-3" />
-                          </span>
-                        )}
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <CalendarComponent
-                        mode="single"
-                        selected={task.data_vencimento ? parseISO(task.data_vencimento) : undefined}
-                        onSelect={(date) => onUpdate({ id: task.id, data_vencimento: date ? format(date, "yyyy-MM-dd") : null })}
-                        initialFocus
-                        locale={ptBR}
-                        className={cn("p-3 pointer-events-auto")}
-                      />
-                    </PopoverContent>
-                  </Popover>
+                <div className="sm:col-span-2">
+                  <label className="text-muted-foreground text-[11px] font-medium block mb-1">Data e hora de vencimento</label>
+                  <div className="flex items-center gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          className={cn(
+                            "flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-left flex items-center gap-1.5 focus:outline-none focus:ring-1 focus:ring-ring",
+                            !task.data_vencimento && "text-muted-foreground"
+                          )}
+                        >
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          {task.data_vencimento
+                            ? format(new Date(task.data_vencimento), "dd/MM/yyyy", { locale: ptBR })
+                            : "Selecionar data"}
+                          {task.data_vencimento && (
+                            <span
+                              onClick={(e) => { e.stopPropagation(); onUpdate({ id: task.id, data_vencimento: null }); }}
+                              className="ml-auto text-muted-foreground hover:text-destructive"
+                            >
+                              <X className="h-3 w-3" />
+                            </span>
+                          )}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={task.data_vencimento ? new Date(task.data_vencimento) : undefined}
+                          onSelect={(date) => {
+                            if (!date) { onUpdate({ id: task.id, data_vencimento: null }); return; }
+                            // Preserve existing time if already set
+                            const existing = task.data_vencimento ? new Date(task.data_vencimento) : null;
+                            date.setHours(existing?.getHours() ?? 0, existing?.getMinutes() ?? 0, 0, 0);
+                            onUpdate({ id: task.id, data_vencimento: date.toISOString() });
+                          }}
+                          initialFocus
+                          locale={ptBR}
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <input
+                      type="time"
+                      value={task.data_vencimento
+                        ? format(new Date(task.data_vencimento), "HH:mm")
+                        : ""}
+                      onChange={(e) => {
+                        if (!task.data_vencimento) return;
+                        const [h, m] = e.target.value.split(":").map(Number);
+                        const d = new Date(task.data_vencimento);
+                        d.setHours(h, m, 0, 0);
+                        onUpdate({ id: task.id, data_vencimento: d.toISOString() });
+                      }}
+                      disabled={!task.data_vencimento}
+                      className="w-[90px] bg-background border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-40"
+                    />
+                  </div>
                 </div>
                 <div className="sm:col-span-2">
                   <label className="text-muted-foreground text-[11px] font-medium block mb-1">Descrição</label>
@@ -656,7 +683,7 @@ const ListColumn = memo(function ListColumn({
   const filtered = filterResponsavel ? tarefas.filter((t) => t.responsavel === filterResponsavel) : tarefas;
   
   const getEffectiveDate = (t: Tarefa): string | null => {
-    if (t.data_vencimento) return t.data_vencimento;
+    if (t.data_vencimento) return t.data_vencimento.slice(0, 10); // compare by date only
     const rec = recorrenciaMap.get(t.id);
     if (rec) return getNextRecurrenceDate(rec);
     return null;
@@ -1057,7 +1084,7 @@ export default function TaskManager() {
       const alreadyExists = allTarefas.some(
         (t) =>
           t.tarefa_modelo_id === rec.tarefa_modelo_id &&
-          t.data_vencimento === nextDate &&
+          t.data_vencimento?.slice(0, 10) === nextDate &&
           t.status !== "concluído"
       );
       if (alreadyExists) continue;
