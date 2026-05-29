@@ -21,6 +21,17 @@ export default function AuthPage() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
     } else {
+      // Verifica se o e-mail está na lista de permitidos
+      const { data: allowed } = await (supabase as any)
+        .from("allowed_emails")
+        .select("email")
+        .eq("email", email.trim().toLowerCase())
+        .maybeSingle();
+      if (!allowed) {
+        setError("Este e-mail não está autorizado a criar uma conta.");
+        setLoading(false);
+        return;
+      }
       const { error } = await supabase.auth.signUp({
         email,
         password,
