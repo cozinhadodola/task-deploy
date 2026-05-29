@@ -7,6 +7,7 @@ export type Subtarefa = {
   titulo: string | null;
   status: string | null;
   ordem: number | null;
+  responsavel: string | null;
   created_at: string | null;
 };
 

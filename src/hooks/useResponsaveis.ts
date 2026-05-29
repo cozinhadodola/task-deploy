@@ -4,6 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 export type Responsavel = {
   id: string;
   nome: string;
+  telefone: string | null;
+  waha_pn: string | null;
+  waha_lid: string | null;
+  waha_verificado: boolean | null;
   created_at: string | null;
 };
 
@@ -24,10 +28,27 @@ export function useResponsaveis() {
 export function useCreateResponsavel() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (nome: string) => {
+    mutationFn: async (payload: { nome: string; telefone?: string | null; waha_pn?: string | null; waha_lid?: string | null; waha_verificado?: boolean }) => {
       const { data, error } = await supabase
         .from("task_responsaveis" as any)
-        .insert({ nome } as any)
+        .insert(payload as any)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["responsaveis"] }),
+  });
+}
+
+export function useUpdateResponsavel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<Responsavel> & { id: string }) => {
+      const { data, error } = await supabase
+        .from("task_responsaveis" as any)
+        .update(updates as any)
+        .eq("id", id)
         .select()
         .single();
       if (error) throw error;

@@ -30,16 +30,17 @@ import {
 import { useListas, useCreateLista, useDeleteLista, useReorderListas } from "@/hooks/useListas";
 import { useAllTarefas, useCreateTarefa, useUpdateTarefa, useDeleteTarefa, useReorderTarefas, type Tarefa } from "@/hooks/useTarefas";
 import { useSubtarefas, useCreateSubtarefa, useUpdateSubtarefa, useDeleteSubtarefa } from "@/hooks/useSubtarefas";
-import { useResponsaveis, useCreateResponsavel, useDeleteResponsavel } from "@/hooks/useResponsaveis";
+import { useResponsaveis } from "@/hooks/useResponsaveis";
 import { useAllRecorrencias, useRecorrenciaByTarefa, useCreateRecorrencia, useUpdateRecorrencia, useDeleteRecorrencia, type Recorrencia } from "@/hooks/useRecorrencias";
 import { useAtualizacoes, useCreateAtualizacao, useDeleteAtualizacao } from "@/hooks/useAtualizacoes";
 import RecurrencePanel, { recurrenceLabel } from "@/components/RecurrencePanel";
 import { Constants } from "@/integrations/supabase/types";
 import ListaPermissoesModal from "@/components/ListaPermissoesModal";
 import AdminPanel from "@/components/AdminPanel";
+import ResponsaveisModal from "@/components/ResponsaveisModal";
 import { useCurrentUser, useListaOwner } from "@/hooks/useListaPermissoes";
 import { useIsAdmin } from "@/hooks/useAdmin";
-import { Share2, LogOut, ShieldCheck } from "lucide-react";
+import { Share2, LogOut, ShieldCheck, Settings2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const STATUS_OPTIONS = Constants.public.Enums.status_type;
@@ -189,12 +190,13 @@ function DueDateBadge({ dateStr, isDone }: { dateStr: string; isDone: boolean })
 }
 
 /* ─── Subtask List ─── */
-function SubtaskList({ tarefaId }: { tarefaId: string }) {
+function SubtaskList({ tarefaId, responsaveis }: { tarefaId: string; responsaveis: { id: string; nome: string }[] }) {
   const { data: subtarefas = [] } = useSubtarefas(tarefaId);
   const createSub = useCreateSubtarefa();
   const updateSub = useUpdateSubtarefa();
   const deleteSub = useDeleteSubtarefa();
   const [input, setInput] = useState("");
+  const [expandedSub, setExpandedSub] = useState<string | null>(null);
 
   const addSub = () => {
     const titulo = input.trim();
@@ -204,33 +206,58 @@ function SubtaskList({ tarefaId }: { tarefaId: string }) {
   };
 
   return (
-    <div className="ml-8 mt-1 space-y-1 border-l-2 border-border pl-3">
+    <div className="ml-8 mt-1 space-y-0.5 border-l-2 border-border pl-3">
       {subtarefas.map((sub) => (
-        <div key={sub.id} className="flex items-center gap-2 group/sub py-0.5">
-          <button
-            onClick={() =>
-              updateSub.mutate({
-                id: sub.id,
-                status: sub.status === "concluído" ? "pendente" : "concluído",
-              })
-            }
-            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-all ${
-              sub.status === "concluído"
-                ? "border-primary bg-primary"
-                : "border-muted-foreground/30 hover:border-primary"
-            }`}
-          >
-            {sub.status === "concluído" && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
-          </button>
-          <span className={`flex-1 text-sm ${sub.status === "concluído" ? "line-through text-muted-foreground/60" : "text-foreground"}`}>
-            {sub.titulo}
-          </span>
-          <button
-            onClick={() => deleteSub.mutate(sub.id)}
-            className="opacity-0 group-hover/sub:opacity-100 text-muted-foreground hover:text-destructive transition-all"
-          >
-            <X className="h-3 w-3" />
-          </button>
+        <div key={sub.id} className="group/sub">
+          <div className="flex items-center gap-2 py-0.5">
+            <button
+              onClick={() =>
+                updateSub.mutate({
+                  id: sub.id,
+                  status: sub.status === "concluído" ? "pendente" : "concluído",
+                })
+              }
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-all ${
+                sub.status === "concluído"
+                  ? "border-primary bg-primary"
+                  : "border-muted-foreground/30 hover:border-primary"
+              }`}
+            >
+              {sub.status === "concluído" && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+            </button>
+            <span
+              onClick={() => setExpandedSub(expandedSub === sub.id ? null : sub.id)}
+              className={`flex-1 text-sm cursor-pointer ${sub.status === "concluído" ? "line-through text-muted-foreground/60" : "text-foreground"}`}
+            >
+              {sub.titulo}
+            </span>
+            {sub.responsavel && (
+              <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">
+                {sub.responsavel}
+              </span>
+            )}
+            <button
+              onClick={() => deleteSub.mutate(sub.id)}
+              className="opacity-0 group-hover/sub:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+          {/* Responsável inline editor */}
+          {expandedSub === sub.id && (
+            <div className="ml-6 pb-1">
+              <select
+                value={sub.responsavel ?? ""}
+                onChange={(e) => updateSub.mutate({ id: sub.id, responsavel: e.target.value || null })}
+                className="w-full bg-background border border-border rounded px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="">Sem responsável</option>
+                {responsaveis.map((r) => (
+                  <option key={r.id} value={r.nome}>{r.nome}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       ))}
       <form onSubmit={(e) => { e.preventDefault(); addSub(); }} className="flex items-center gap-2">
@@ -557,7 +584,7 @@ const TaskItem = memo(function TaskItem({
                   <TaskUpdates tarefaId={task.id} />
                 </div>
               </div>
-              <SubtaskList tarefaId={task.id} />
+              <SubtaskList tarefaId={task.id} responsaveis={responsaveis} />
             </div>
           </motion.div>
         )}
@@ -985,8 +1012,6 @@ export default function TaskManager() {
   const deleteLista = useDeleteLista();
   const reorderListas = useReorderListas();
   const reorderTarefas = useReorderTarefas();
-  const createResponsavel = useCreateResponsavel();
-  const deleteResponsavel = useDeleteResponsavel();
   const updateTarefa = useUpdateTarefa();
   const deleteTarefa = useDeleteTarefa();
   const createTarefa = useCreateTarefa();
@@ -994,11 +1019,11 @@ export default function TaskManager() {
   const [selectedListaId, setSelectedListaId] = useState<string | null>(null);
   const [filterResponsavel, setFilterResponsavel] = useState<string | null>(null);
   const [newListName, setNewListName] = useState("");
-  const [newResponsavelName, setNewResponsavelName] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showResponsaveis, setShowResponsaveis] = useState(false);
   const [showNewListInput, setShowNewListInput] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showResponsaveisModal, setShowResponsaveisModal] = useState(false);
 
   const { data: isAdmin } = useIsAdmin();
 
@@ -1073,13 +1098,6 @@ export default function TaskManager() {
     createLista.mutate(nome);
     setNewListName("");
     setShowNewListInput(false);
-  };
-
-  const addResponsavel = () => {
-    const nome = newResponsavelName.trim();
-    if (!nome) return;
-    createResponsavel.mutate(nome);
-    setNewResponsavelName("");
   };
 
   const taskCountByList = useMemo(() => {
@@ -1266,15 +1284,24 @@ export default function TaskManager() {
 
               {/* Responsáveis section */}
               <div className="pt-4 pb-1 px-3">
-                <button
-                  onClick={() => setShowResponsaveis(!showResponsaveis)}
-                  className="flex items-center gap-1.5 w-full group"
-                >
-                  <motion.div animate={{ rotate: showResponsaveis ? 90 : 0 }} transition={{ duration: 0.15 }}>
-                    <ChevronRight className="h-3 w-3 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
-                  </motion.div>
-                  <span className="text-xs font-medium text-muted-foreground/60">Responsáveis</span>
-                </button>
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setShowResponsaveis(!showResponsaveis)}
+                    className="flex items-center gap-1.5 group"
+                  >
+                    <motion.div animate={{ rotate: showResponsaveis ? 90 : 0 }} transition={{ duration: 0.15 }}>
+                      <ChevronRight className="h-3 w-3 text-muted-foreground/50 group-hover:text-muted-foreground transition-colors" />
+                    </motion.div>
+                    <span className="text-xs font-medium text-muted-foreground/60">Responsáveis</span>
+                  </button>
+                  <button
+                    onClick={() => setShowResponsaveisModal(true)}
+                    title="Gerenciar responsáveis"
+                    className="text-muted-foreground/40 hover:text-muted-foreground transition-colors p-0.5 rounded"
+                  >
+                    <Settings2 className="h-3 w-3" />
+                  </button>
+                </div>
               </div>
 
               <AnimatePresence>
@@ -1299,21 +1326,15 @@ export default function TaskManager() {
                         icon={User}
                         label={resp.nome}
                         onClick={() => { setFilterResponsavel(filterResponsavel === resp.nome ? null : resp.nome); closeSidebarOnMobile(); }}
-                        onDelete={() => deleteResponsavel.mutate(resp.id)}
                       />
                     ))}
-                    <form
-                      onSubmit={(e) => { e.preventDefault(); addResponsavel(); }}
-                      className="flex items-center gap-2.5 px-3 py-2"
+                    <button
+                      onClick={() => setShowResponsaveisModal(true)}
+                      className="flex items-center gap-2.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors w-full"
                     >
-                      <Plus className="h-4 w-4 text-muted-foreground/40" />
-                      <input
-                        value={newResponsavelName}
-                        onChange={(e) => setNewResponsavelName(e.target.value)}
-                        placeholder="Novo responsável…"
-                        className="flex-1 bg-transparent text-sm placeholder:text-muted-foreground/35 focus:outline-none text-sidebar-foreground"
-                      />
-                    </form>
+                      <Plus className="h-4 w-4" />
+                      <span>Gerenciar responsáveis</span>
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -1366,6 +1387,7 @@ export default function TaskManager() {
             </button>
           </div>
           {showAdminPanel && <AdminPanel onClose={() => setShowAdminPanel(false)} />}
+          {showResponsaveisModal && <ResponsaveisModal onClose={() => setShowResponsaveisModal(false)} />}
         </header>
 
         <div className="flex-1 p-4 md:p-6 overflow-auto">
