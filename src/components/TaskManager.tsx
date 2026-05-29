@@ -623,15 +623,19 @@ const ListColumn = memo(function ListColumn({
     if (rec) return getNextRecurrenceDate(rec);
     return null;
   };
-  
+
   const sortByDate = (a: Tarefa, b: Tarefa) => {
     const dateA = getEffectiveDate(a);
     const dateB = getEffectiveDate(b);
+    // Tarefas sem data vão para o final, ordenadas pela ordem manual
     if (!dateA && !dateB) return (a.ordem ?? 0) - (b.ordem ?? 0);
     if (!dateA) return 1;
     if (!dateB) return -1;
+    // Ambas têm data: ordena por data crescente (mais antiga/atrasada primeiro)
     const diff = dateA.localeCompare(dateB);
-    return diff !== 0 ? diff : (a.ordem ?? 0) - (b.ordem ?? 0);
+    if (diff !== 0) return diff;
+    // Mesma data: desempata pela ordem manual
+    return (a.ordem ?? 0) - (b.ordem ?? 0);
   };
   const pending = filtered.filter((t) => t.status !== "concluído").sort(sortByDate);
   const done = filtered.filter((t) => t.status === "concluído").sort(sortByDate);
