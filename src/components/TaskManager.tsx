@@ -624,17 +624,21 @@ const ListColumn = memo(function ListColumn({
     return null;
   };
 
+  const PRIORITY_RANK: Record<string, number> = { alta: 0, média: 1, baixa: 2 };
+
   const sortByDate = (a: Tarefa, b: Tarefa) => {
+    // Prioridade primeiro (alta → média → baixa → sem prioridade)
+    const prioA = a.prioridade ? (PRIORITY_RANK[a.prioridade] ?? 3) : 3;
+    const prioB = b.prioridade ? (PRIORITY_RANK[b.prioridade] ?? 3) : 3;
+    if (prioA !== prioB) return prioA - prioB;
+    // Mesma prioridade: ordena por data crescente
     const dateA = getEffectiveDate(a);
     const dateB = getEffectiveDate(b);
-    // Tarefas sem data vão para o final, ordenadas pela ordem manual
     if (!dateA && !dateB) return (a.ordem ?? 0) - (b.ordem ?? 0);
     if (!dateA) return 1;
     if (!dateB) return -1;
-    // Ambas têm data: ordena por data crescente (mais antiga/atrasada primeiro)
     const diff = dateA.localeCompare(dateB);
     if (diff !== 0) return diff;
-    // Mesma data: desempata pela ordem manual
     return (a.ordem ?? 0) - (b.ordem ?? 0);
   };
   const pending = filtered.filter((t) => t.status !== "concluído").sort(sortByDate);
