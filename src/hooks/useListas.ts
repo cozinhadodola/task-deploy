@@ -28,9 +28,10 @@ export function useCreateLista() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (nome: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
       const { data, error } = await supabase
         .from("task_listas" as any)
-        .insert({ nome } as any)
+        .insert({ nome, owner_id: user?.id } as any)
         .select()
         .single();
       if (error) throw error;

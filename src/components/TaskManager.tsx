@@ -35,6 +35,10 @@ import { useAllRecorrencias, useRecorrenciaByTarefa, useCreateRecorrencia, useUp
 import { useAtualizacoes, useCreateAtualizacao, useDeleteAtualizacao } from "@/hooks/useAtualizacoes";
 import RecurrencePanel, { recurrenceLabel } from "@/components/RecurrencePanel";
 import { Constants } from "@/integrations/supabase/types";
+import ListaPermissoesModal from "@/components/ListaPermissoesModal";
+import { useCurrentUser, useListaOwner } from "@/hooks/useListaPermissoes";
+import { Share2, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const STATUS_OPTIONS = Constants.public.Enums.status_type;
 const PRIORITY_OPTIONS = Constants.public.Enums.priority_level;
@@ -612,8 +616,13 @@ const ListColumn = memo(function ListColumn({
   const [showInput, setShowInput] = useState(false);
   const [showDone, setShowDone] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [showPermissoes, setShowPermissoes] = useState(false);
   const [visibleCount, setVisibleCount] = useState(20);
   const BATCH_SIZE = 20;
+
+  const { data: currentUser } = useCurrentUser();
+  const { data: ownerId } = useListaOwner(listaId);
+  const isOwner = listaId && currentUser?.id === ownerId;
 
   const filtered = filterResponsavel ? tarefas.filter((t) => t.responsavel === filterResponsavel) : tarefas;
   
@@ -668,15 +677,33 @@ const ListColumn = memo(function ListColumn({
           >
             <MoreVertical className="h-4 w-4" />
           </button>
-          {showMenu && onDeleteList && (
-            <div className="absolute right-0 top-8 bg-popover border border-border rounded-lg shadow-lg py-1 z-10 min-w-[140px]">
-              <button
-                onClick={() => { onDeleteList(); setShowMenu(false); }}
-                className="w-full text-left px-3 py-1.5 text-sm text-destructive hover:bg-muted transition-colors"
-              >
-                Excluir lista
-              </button>
+          {showMenu && (
+            <div className="absolute right-0 top-8 bg-popover border border-border rounded-lg shadow-lg py-1 z-10 min-w-[160px]">
+              {listaId && (
+                <button
+                  onClick={() => { setShowPermissoes(true); setShowMenu(false); }}
+                  className="w-full text-left px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors flex items-center gap-2"
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                  Compartilhar
+                </button>
+              )}
+              {onDeleteList && isOwner && (
+                <button
+                  onClick={() => { onDeleteList(); setShowMenu(false); }}
+                  className="w-full text-left px-3 py-1.5 text-sm text-destructive hover:bg-muted transition-colors"
+                >
+                  Excluir lista
+                </button>
+              )}
             </div>
+          )}
+          {showPermissoes && listaId && (
+            <ListaPermissoesModal
+              listaId={listaId}
+              listaNome={listName}
+              onClose={() => setShowPermissoes(false)}
+            />
           )}
         </div>
       </div>
@@ -1315,6 +1342,13 @@ export default function TaskManager() {
               <X className="h-3 w-3" />
             </button>
           )}
+          <button
+            onClick={() => supabase.auth.signOut()}
+            title="Sair"
+            className="ml-auto text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/60 transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </header>
 
         <div className="flex-1 p-4 md:p-6 overflow-auto">
