@@ -18,6 +18,7 @@ export type Tarefa = {
   hora_recorrencia: string | null;
   tarefa_modelo_id: string | null;
   ordem: number | null;
+  deleted_at: string | null;
   created_at: string | null;
   updated_at: string | null;
 };
@@ -29,6 +30,7 @@ export function useTarefas(listaId: string | null) {
       let query = supabase
         .from("task_tarefas" as any)
         .select("*")
+        .is("deleted_at", null)
         .order("data_vencimento", { ascending: true, nullsFirst: false })
         .order("ordem", { ascending: true })
         .order("created_at", { ascending: false });
@@ -52,6 +54,7 @@ export function useAllTarefas() {
       const { data, error } = await supabase
         .from("task_tarefas" as any)
         .select("*")
+        .is("deleted_at", null)
         .order("data_vencimento", { ascending: true, nullsFirst: false })
         .order("ordem", { ascending: true })
         .order("created_at", { ascending: false });
@@ -59,6 +62,23 @@ export function useAllTarefas() {
       return (data as unknown) as Tarefa[];
     },
     staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useDeletedTarefas() {
+  return useQuery({
+    queryKey: ["tarefas", "deleted"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("task_tarefas" as any)
+        .select("*")
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data as unknown) as Tarefa[];
+    },
+    staleTime: 30 * 1000,
   });
 }
 
@@ -91,7 +111,6 @@ export function useUpdateTarefa() {
       if (error) throw error;
       return data;
     },
-    // Optimistic update: atualiza o cache imediatamente sem esperar a API
     onMutate: async (newData) => {
       await qc.cancelQueries({ queryKey: ["tarefas"] });
       const snapshots = qc.getQueriesData<Tarefa[]>({ queryKey: ["tarefas"] });
@@ -102,7 +121,6 @@ export function useUpdateTarefa() {
       return { snapshots };
     },
     onError: (_err, _vars, context: any) => {
-      // Rollback em caso de erro
       context?.snapshots?.forEach(([queryKey, data]: any) => {
         qc.setQueryData(queryKey, data);
       });
@@ -115,7 +133,40 @@ export function useDeleteTarefa() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("task_tarefas" as any).delete().eq("id", id);
+      // Soft delete: marca deleted_at em vez de excluir
+      const { error } = await supabase
+        .from("task_tarefas" as any)
+        .update({ deleted_at: new Date().toISOString() } as any)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["tarefas"] });
+      const snapshots = qc.getQueriesData<Tarefa[]>({ queryKey: ["tarefas"] });
+      // Remove da lista imediatamente (optimistic)
+      qc.setQueriesData<Tarefa[]>({ queryKey: ["tarefas"] }, (old) => {
+        if (!Array.isArray(old)) return old;
+        return old.filter((t) => t.id !== id);
+      });
+      return { snapshots };
+    },
+    onError: (_err, _vars, context: any) => {
+      context?.snapshots?.forEach(([queryKey, data]: any) => {
+        qc.setQueryData(queryKey, data);
+      });
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["tarefas"] }),
+  });
+}
+
+export function useRestoreTarefa() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("task_tarefas" as any)
+        .update({ deleted_at: null } as any)
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tarefas"] }),
