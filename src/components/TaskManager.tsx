@@ -539,116 +539,39 @@ const TaskItem = memo(function TaskItem({
                 <div className="sm:col-span-2">
                   <label className="text-muted-foreground text-[11px] font-medium block mb-1">Data e hora de vencimento</label>
                   <div className="flex items-center gap-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button
-                          className={cn(
-                            "flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-left flex items-center gap-1.5 focus:outline-none focus:ring-1 focus:ring-ring",
-                            !task.data_vencimento && "text-muted-foreground"
-                          )}
-                        >
-                          <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          {task.data_vencimento
-                            ? format(new Date(task.data_vencimento), "dd/MM/yyyy", { locale: ptBR })
-                            : "Selecionar data"}
-                          {task.data_vencimento && (
-                            <span
-                              onClick={(e) => { e.stopPropagation(); onUpdate({ id: task.id, data_vencimento: null }); }}
-                              className="ml-auto text-muted-foreground hover:text-destructive"
-                            >
-                              <X className="h-3 w-3" />
-                            </span>
-                          )}
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          mode="single"
-                          selected={task.data_vencimento ? new Date(task.data_vencimento) : undefined}
-                          onSelect={(date) => {
-                            if (!date) { onUpdate({ id: task.id, data_vencimento: null }); return; }
-                            // Preserve existing time if already set
-                            const existing = task.data_vencimento ? new Date(task.data_vencimento) : null;
-                            date.setHours(existing?.getHours() ?? 0, existing?.getMinutes() ?? 0, 0, 0);
-                            onUpdate({ id: task.id, data_vencimento: date.toISOString() });
-                          }}
-                          initialFocus
-                          locale={ptBR}
-                          className={cn("p-3 pointer-events-auto")}
-                        />
-                      </PopoverContent>
-                    </Popover>
                     <input
-                      type="time"
-                      value={task.data_vencimento
-                        ? format(new Date(task.data_vencimento), "HH:mm")
-                        : ""}
+                      type="datetime-local"
+                      value={task.data_vencimento ? new Date(task.data_vencimento).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(0, 16) : ""}
                       onChange={(e) => {
-                        if (!task.data_vencimento) return;
-                        const [h, m] = e.target.value.split(":").map(Number);
-                        const d = new Date(task.data_vencimento);
-                        d.setHours(h, m, 0, 0);
-                        onUpdate({ id: task.id, data_vencimento: d.toISOString() });
+                        if (!e.target.value) { onUpdate({ id: task.id, data_vencimento: null }); return; }
+                        onUpdate({ id: task.id, data_vencimento: new Date(e.target.value).toISOString() });
                       }}
-                      disabled={!task.data_vencimento}
-                      className="w-[90px] bg-background border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-40"
+                      className="flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                     />
+                    {task.data_vencimento && (
+                      <button onClick={() => onUpdate({ id: task.id, data_vencimento: null })} className="text-muted-foreground hover:text-destructive">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="sm:col-span-2">
                   <label className="text-muted-foreground text-[11px] font-medium block mb-1">⏰ Lembrete</label>
                   <div className="flex items-center gap-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button
-                          className={cn(
-                            "flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-left flex items-center gap-1.5 focus:outline-none focus:ring-1 focus:ring-ring",
-                            !task.lembrete_em && "text-muted-foreground"
-                          )}
-                        >
-                          <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          {task.lembrete_em
-                            ? format(new Date(task.lembrete_em), "dd/MM/yyyy", { locale: ptBR })
-                            : "Selecionar data"}
-                          {task.lembrete_em && (
-                            <span
-                              onClick={(e) => { e.stopPropagation(); onUpdate({ id: task.id, lembrete_em: null, lembrete_enviado_em: null }); }}
-                              className="ml-auto text-muted-foreground hover:text-destructive"
-                            >
-                              <X className="h-3 w-3" />
-                            </span>
-                          )}
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <CalendarComponent
-                          mode="single"
-                          selected={task.lembrete_em ? new Date(task.lembrete_em) : undefined}
-                          onSelect={(date) => {
-                            if (!date) { onUpdate({ id: task.id, lembrete_em: null, lembrete_enviado_em: null }); return; }
-                            const existing = task.lembrete_em ? new Date(task.lembrete_em) : null;
-                            date.setHours(existing?.getHours() ?? 8, existing?.getMinutes() ?? 0, 0, 0);
-                            onUpdate({ id: task.id, lembrete_em: date.toISOString(), lembrete_enviado_em: null });
-                          }}
-                          initialFocus
-                          locale={ptBR}
-                          className={cn("p-3 pointer-events-auto")}
-                        />
-                      </PopoverContent>
-                    </Popover>
                     <input
-                      type="time"
-                      value={task.lembrete_em ? format(new Date(task.lembrete_em), "HH:mm") : ""}
+                      type="datetime-local"
+                      value={task.lembrete_em ? new Date(task.lembrete_em).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(0, 16) : ""}
                       onChange={(e) => {
-                        if (!task.lembrete_em) return;
-                        const [h, m] = e.target.value.split(":").map(Number);
-                        const d = new Date(task.lembrete_em);
-                        d.setHours(h, m, 0, 0);
-                        onUpdate({ id: task.id, lembrete_em: d.toISOString(), lembrete_enviado_em: null });
+                        if (!e.target.value) { onUpdate({ id: task.id, lembrete_em: null, lembrete_enviado_em: null }); return; }
+                        onUpdate({ id: task.id, lembrete_em: new Date(e.target.value).toISOString(), lembrete_enviado_em: null });
                       }}
-                      disabled={!task.lembrete_em}
-                      className="w-[90px] bg-background border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-40"
+                      className="flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                     />
+                    {task.lembrete_em && (
+                      <button onClick={() => onUpdate({ id: task.id, lembrete_em: null, lembrete_enviado_em: null })} className="text-muted-foreground hover:text-destructive">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="sm:col-span-2">
