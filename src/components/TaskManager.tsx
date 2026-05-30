@@ -27,7 +27,7 @@ import {
   MoreVertical,
   Star,
 } from "lucide-react";
-import { useListas, useCreateLista, useDeleteLista, useReorderListas } from "@/hooks/useListas";
+import { useListas, useCreateLista, useDeleteLista, useReorderListas, useUpdateLista, WAHA_SESSIONS } from "@/hooks/useListas";
 import { useAllTarefas, useCreateTarefa, useUpdateTarefa, useDeleteTarefa, useReorderTarefas, type Tarefa } from "@/hooks/useTarefas";
 import { useSubtarefas, useCreateSubtarefa, useUpdateSubtarefa, useDeleteSubtarefa } from "@/hooks/useSubtarefas";
 import { useResponsaveis } from "@/hooks/useResponsaveis";
@@ -648,6 +648,7 @@ function InfiniteScrollSentinel({ onVisible }: { onVisible: () => void }) {
 const ListColumn = memo(function ListColumn({
   listaId,
   listName,
+  wahaSession,
   tarefas,
   responsaveis,
   recorrenciaMap,
@@ -659,6 +660,7 @@ const ListColumn = memo(function ListColumn({
 }: {
   listaId: string | null;
   listName: string;
+  wahaSession: string | null;
   tarefas: Tarefa[];
   responsaveis: { id: string; nome: string }[];
   recorrenciaMap: Map<string, Recorrencia>;
@@ -673,12 +675,14 @@ const ListColumn = memo(function ListColumn({
   const [showDone, setShowDone] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showPermissoes, setShowPermissoes] = useState(false);
+  const [showWahaConfig, setShowWahaConfig] = useState(false);
   const [visibleCount, setVisibleCount] = useState(20);
   const BATCH_SIZE = 20;
 
   const { data: currentUser } = useCurrentUser();
   const { data: ownerId } = useListaOwner(listaId);
   const isOwner = listaId && currentUser?.id === ownerId;
+  const updateLista = useUpdateLista();
 
   const filtered = filterResponsavel ? tarefas.filter((t) => t.responsavel === filterResponsavel) : tarefas;
   
@@ -734,7 +738,7 @@ const ListColumn = memo(function ListColumn({
             <MoreVertical className="h-4 w-4" />
           </button>
           {showMenu && (
-            <div className="absolute right-0 top-8 bg-popover border border-border rounded-lg shadow-lg py-1 z-10 min-w-[160px]">
+            <div className="absolute right-0 top-8 bg-popover border border-border rounded-lg shadow-lg py-1 z-10 min-w-[180px]">
               {listaId && (
                 <button
                   onClick={() => { setShowPermissoes(true); setShowMenu(false); }}
@@ -744,10 +748,39 @@ const ListColumn = memo(function ListColumn({
                   Compartilhar
                 </button>
               )}
+              {listaId && isOwner && (
+                <button
+                  onClick={() => { setShowWahaConfig(!showWahaConfig); }}
+                  className="w-full text-left px-3 py-1.5 text-sm text-foreground hover:bg-muted transition-colors flex items-center gap-2"
+                >
+                  <Settings2 className="h-3.5 w-3.5" />
+                  Sessão WhatsApp
+                  {wahaSession && <span className="ml-auto text-xs text-muted-foreground">{wahaSession}</span>}
+                </button>
+              )}
+              {showWahaConfig && listaId && (
+                <div className="px-3 py-2 border-t border-border">
+                  <p className="text-xs text-muted-foreground mb-1.5">Sessão para envios:</p>
+                  <select
+                    className="w-full text-xs border border-border rounded px-2 py-1 bg-background text-foreground"
+                    value={wahaSession || ""}
+                    onChange={(e) => {
+                      updateLista.mutate({ id: listaId, waha_session: e.target.value || null });
+                      setShowWahaConfig(false);
+                      setShowMenu(false);
+                    }}
+                  >
+                    <option value="">— sem sessão —</option>
+                    {WAHA_SESSIONS.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               {onDeleteList && isOwner && (
                 <button
                   onClick={() => { onDeleteList(); setShowMenu(false); }}
-                  className="w-full text-left px-3 py-1.5 text-sm text-destructive hover:bg-muted transition-colors"
+                  className="w-full text-left px-3 py-1.5 text-sm text-destructive hover:bg-muted transition-colors border-t border-border mt-1"
                 >
                   Excluir lista
                 </button>
@@ -880,7 +913,7 @@ function BoardView({
   onDeleteTask,
   onCreateTask,
 }: {
-  listas: { id: string; nome: string }[];
+  listas: { id: string; nome: string; waha_session: string | null }[];
   allTarefas: Tarefa[];
   responsaveis: { id: string; nome: string }[];
   recorrenciaMap: Map<string, Recorrencia>;
@@ -899,6 +932,7 @@ function BoardView({
             key={lista.id}
             listaId={lista.id}
             listName={lista.nome}
+            wahaSession={lista.waha_session ?? null}
             tarefas={tarefas}
             responsaveis={responsaveis}
             recorrenciaMap={recorrenciaMap}
@@ -925,6 +959,7 @@ function BoardView({
 function SingleListView({
   listaId,
   listName,
+  wahaSession,
   tarefas,
   responsaveis,
   recorrenciaMap,
@@ -936,6 +971,7 @@ function SingleListView({
 }: {
   listaId: string;
   listName: string;
+  wahaSession: string | null;
   tarefas: Tarefa[];
   responsaveis: { id: string; nome: string }[];
   recorrenciaMap: Map<string, Recorrencia>;
@@ -950,6 +986,7 @@ function SingleListView({
       <ListColumn
         listaId={listaId}
         listName={listName}
+        wahaSession={wahaSession}
         tarefas={tarefas}
         responsaveis={responsaveis}
         recorrenciaMap={recorrenciaMap}
@@ -1435,6 +1472,7 @@ export default function TaskManager() {
               <SingleListView
                 listaId={selectedListaId!}
                 listName={selectedListName}
+                wahaSession={listas.find(l => l.id === selectedListaId)?.waha_session ?? null}
                 tarefas={selectedListTarefas}
                 responsaveis={responsaveis}
                 recorrenciaMap={recorrenciaMap}
@@ -1451,3 +1489,4 @@ export default function TaskManager() {
     </div>
   );
 }
+
