@@ -28,7 +28,7 @@ import {
   Star,
 } from "lucide-react";
 import { useListas, useCreateLista, useDeleteLista, useReorderListas, useUpdateLista, WAHA_SESSIONS } from "@/hooks/useListas";
-import { useAllTarefas, useCreateTarefa, useUpdateTarefa, useDeleteTarefa, useReorderTarefas, type Tarefa } from "@/hooks/useTarefas";
+import { useAllTarefas, useCreateTarefa, useUpdateTarefa, useDeleteTarefa, useReorderTarefas, useDeletedTarefas, useRestoreTarefa, type Tarefa } from "@/hooks/useTarefas";
 import { useSubtarefas, useCreateSubtarefa, useUpdateSubtarefa, useDeleteSubtarefa } from "@/hooks/useSubtarefas";
 import { useResponsaveis } from "@/hooks/useResponsaveis";
 import { useAllRecorrencias, useRecorrenciaByTarefa, useCreateRecorrencia, useUpdateRecorrencia, useDeleteRecorrencia, type Recorrencia } from "@/hooks/useRecorrencias";
@@ -1067,8 +1067,11 @@ export default function TaskManager() {
   const [showNewListInput, setShowNewListInput] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showResponsaveisModal, setShowResponsaveisModal] = useState(false);
+  const [showLixeira, setShowLixeira] = useState(false);
 
   const { data: isAdmin } = useIsAdmin();
+  const { data: deletedTarefas = [] } = useDeletedTarefas();
+  const restoreTarefa = useRestoreTarefa();
 
   // Build recorrencia map once (eliminates N+1 queries)
   const recorrenciaMap = useMemo(() => {
@@ -1412,6 +1415,18 @@ export default function TaskManager() {
             </button>
           )}
           <div className="ml-auto flex items-center gap-1">
+            <button
+              onClick={() => setShowLixeira(true)}
+              title={`Lixeira (${deletedTarefas.length})`}
+              className="relative text-muted-foreground hover:text-foreground p-1.5 rounded-lg hover:bg-muted/60 transition-colors"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deletedTarefas.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-destructive text-destructive-foreground text-[9px] rounded-full w-3.5 h-3.5 flex items-center justify-center font-bold">
+                  {deletedTarefas.length > 9 ? "9+" : deletedTarefas.length}
+                </span>
+              )}
+            </button>
             {isAdmin && (
               <button
                 onClick={() => setShowAdminPanel(true)}
@@ -1431,6 +1446,38 @@ export default function TaskManager() {
           </div>
           {showAdminPanel && <AdminPanel onClose={() => setShowAdminPanel(false)} />}
           {showResponsaveisModal && <ResponsaveisModal onClose={() => setShowResponsaveisModal(false)} />}
+          {/* Modal Lixeira */}
+          {showLixeira && (
+            <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowLixeira(false)}>
+              <div className="bg-card border border-border rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                  <h2 className="font-semibold text-sm flex items-center gap-2"><Trash2 className="h-4 w-4 text-destructive" /> Lixeira ({deletedTarefas.length})</h2>
+                  <button onClick={() => setShowLixeira(false)} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+                </div>
+                <div className="overflow-y-auto flex-1 p-3 space-y-2">
+                  {deletedTarefas.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">Lixeira vazia</p>
+                  ) : deletedTarefas.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between gap-3 border border-border rounded-lg px-3 py-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{t.titulo}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Excluída {t.deleted_at ? new Date(t.deleted_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ""}
+                          {t.responsavel && ` · ${t.responsavel}`}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => restoreTarefa.mutate(t.id)}
+                        className="text-xs bg-primary text-primary-foreground rounded-md px-2.5 py-1 hover:bg-primary/90 transition-colors shrink-0"
+                      >
+                        Restaurar
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </header>
 
         <div className="flex-1 p-4 md:p-6 overflow-auto">
