@@ -596,6 +596,62 @@ const TaskItem = memo(function TaskItem({
                   </div>
                 </div>
                 <div className="sm:col-span-2">
+                  <label className="text-muted-foreground text-[11px] font-medium block mb-1">⏰ Lembrete</label>
+                  <div className="flex items-center gap-2">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button
+                          className={cn(
+                            "flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-left flex items-center gap-1.5 focus:outline-none focus:ring-1 focus:ring-ring",
+                            !task.lembrete_em && "text-muted-foreground"
+                          )}
+                        >
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          {task.lembrete_em
+                            ? format(new Date(task.lembrete_em), "dd/MM/yyyy", { locale: ptBR })
+                            : "Selecionar data"}
+                          {task.lembrete_em && (
+                            <span
+                              onClick={(e) => { e.stopPropagation(); onUpdate({ id: task.id, lembrete_em: null, lembrete_enviado_em: null }); }}
+                              className="ml-auto text-muted-foreground hover:text-destructive"
+                            >
+                              <X className="h-3 w-3" />
+                            </span>
+                          )}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={task.lembrete_em ? new Date(task.lembrete_em) : undefined}
+                          onSelect={(date) => {
+                            if (!date) { onUpdate({ id: task.id, lembrete_em: null, lembrete_enviado_em: null }); return; }
+                            const existing = task.lembrete_em ? new Date(task.lembrete_em) : null;
+                            date.setHours(existing?.getHours() ?? 8, existing?.getMinutes() ?? 0, 0, 0);
+                            onUpdate({ id: task.id, lembrete_em: date.toISOString(), lembrete_enviado_em: null });
+                          }}
+                          initialFocus
+                          locale={ptBR}
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <input
+                      type="time"
+                      value={task.lembrete_em ? format(new Date(task.lembrete_em), "HH:mm") : ""}
+                      onChange={(e) => {
+                        if (!task.lembrete_em) return;
+                        const [h, m] = e.target.value.split(":").map(Number);
+                        const d = new Date(task.lembrete_em);
+                        d.setHours(h, m, 0, 0);
+                        onUpdate({ id: task.id, lembrete_em: d.toISOString(), lembrete_enviado_em: null });
+                      }}
+                      disabled={!task.lembrete_em}
+                      className="w-[90px] bg-background border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-40"
+                    />
+                  </div>
+                </div>
+                <div className="sm:col-span-2">
                   <label className="text-muted-foreground text-[11px] font-medium block mb-1">Descrição</label>
                   <DebouncedInput
                     value={task.descricao || ""}
