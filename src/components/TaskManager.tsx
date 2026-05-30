@@ -540,13 +540,26 @@ const TaskItem = memo(function TaskItem({
                   <label className="text-muted-foreground text-[11px] font-medium block mb-1">Data e hora de vencimento</label>
                   <div className="flex items-center gap-2">
                     <input
-                      type="datetime-local"
-                      value={task.data_vencimento ? new Date(task.data_vencimento).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(0, 16) : ""}
+                      type="date"
+                      value={task.data_vencimento ? new Date(task.data_vencimento).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(0, 10) : ""}
                       onChange={(e) => {
                         if (!e.target.value) { onUpdate({ id: task.id, data_vencimento: null }); return; }
-                        onUpdate({ id: task.id, data_vencimento: new Date(e.target.value).toISOString() });
+                        const hora = task.data_vencimento ? new Date(task.data_vencimento).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(11, 16) : "00:00";
+                        onUpdate({ id: task.id, data_vencimento: new Date(`${e.target.value}T${hora}:00-03:00`).toISOString() });
                       }}
                       className="flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                    <input
+                      type="time"
+                      value={task.data_vencimento ? new Date(task.data_vencimento).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(11, 16) : ""}
+                      onChange={(e) => {
+                        if (!task.data_vencimento || !e.target.value) return;
+                        const data = new Date(task.data_vencimento).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(0, 10);
+                        onUpdate({ id: task.id, data_vencimento: new Date(`${data}T${e.target.value}:00-03:00`).toISOString() });
+                      }}
+                      disabled={!task.data_vencimento}
+                      placeholder="HH:MM"
+                      className="w-[80px] bg-background border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-40"
                     />
                     {task.data_vencimento && (
                       <button onClick={() => onUpdate({ id: task.id, data_vencimento: null })} className="text-muted-foreground hover:text-destructive">
@@ -559,13 +572,26 @@ const TaskItem = memo(function TaskItem({
                   <label className="text-muted-foreground text-[11px] font-medium block mb-1">⏰ Lembrete</label>
                   <div className="flex items-center gap-2">
                     <input
-                      type="datetime-local"
-                      value={task.lembrete_em ? new Date(task.lembrete_em).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(0, 16) : ""}
+                      type="date"
+                      value={task.lembrete_em ? new Date(task.lembrete_em).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(0, 10) : ""}
                       onChange={(e) => {
                         if (!e.target.value) { onUpdate({ id: task.id, lembrete_em: null, lembrete_enviado_em: null }); return; }
-                        onUpdate({ id: task.id, lembrete_em: new Date(e.target.value).toISOString(), lembrete_enviado_em: null });
+                        const hora = task.lembrete_em ? new Date(task.lembrete_em).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(11, 16) : "08:00";
+                        onUpdate({ id: task.id, lembrete_em: new Date(`${e.target.value}T${hora}:00-03:00`).toISOString(), lembrete_enviado_em: null });
                       }}
                       className="flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    />
+                    <input
+                      type="time"
+                      value={task.lembrete_em ? new Date(task.lembrete_em).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(11, 16) : ""}
+                      onChange={(e) => {
+                        if (!task.lembrete_em || !e.target.value) return;
+                        const data = new Date(task.lembrete_em).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(0, 10);
+                        onUpdate({ id: task.id, lembrete_em: new Date(`${data}T${e.target.value}:00-03:00`).toISOString(), lembrete_enviado_em: null });
+                      }}
+                      disabled={!task.lembrete_em}
+                      placeholder="HH:MM"
+                      className="w-[80px] bg-background border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-40"
                     />
                     {task.lembrete_em && (
                       <button onClick={() => onUpdate({ id: task.id, lembrete_em: null, lembrete_enviado_em: null })} className="text-muted-foreground hover:text-destructive">
