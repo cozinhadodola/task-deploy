@@ -541,21 +541,21 @@ const TaskItem = memo(function TaskItem({
                   <div className="flex items-center gap-2">
                     <input
                       type="date"
-                      value={task.data_vencimento ? new Date(task.data_vencimento).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(0, 10) : ""}
+                      value={task.data_vencimento ? (() => { const d = new Date(new Date(task.data_vencimento).getTime() - 3*60*60*1000); return d.toISOString().slice(0,10); })() : ""}
                       onChange={(e) => {
                         if (!e.target.value) { onUpdate({ id: task.id, data_vencimento: null }); return; }
-                        const hora = task.data_vencimento ? new Date(task.data_vencimento).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(11, 16) : "00:00";
-                        onUpdate({ id: task.id, data_vencimento: new Date(`${e.target.value}T${hora}:00-03:00`).toISOString() });
+                        const horaAtual = task.data_vencimento ? (() => { const d = new Date(new Date(task.data_vencimento).getTime() - 3*60*60*1000); return d.toISOString().slice(11,16); })() : "00:00";
+                        onUpdate({ id: task.id, data_vencimento: new Date(e.target.value + "T" + horaAtual + ":00-03:00").toISOString() });
                       }}
                       className="flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                     />
                     <input
                       type="time"
-                      value={task.data_vencimento ? new Date(task.data_vencimento).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(11, 16) : ""}
+                      value={task.data_vencimento ? (() => { const d = new Date(new Date(task.data_vencimento).getTime() - 3*60*60*1000); return d.toISOString().slice(11,16); })() : ""}
                       onChange={(e) => {
                         if (!task.data_vencimento || !e.target.value) return;
-                        const data = new Date(task.data_vencimento).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(0, 10);
-                        onUpdate({ id: task.id, data_vencimento: new Date(`${data}T${e.target.value}:00-03:00`).toISOString() });
+                        const dataAtual = (() => { const d = new Date(new Date(task.data_vencimento).getTime() - 3*60*60*1000); return d.toISOString().slice(0,10); })();
+                        onUpdate({ id: task.id, data_vencimento: new Date(dataAtual + "T" + e.target.value + ":00-03:00").toISOString() });
                       }}
                       disabled={!task.data_vencimento}
                       placeholder="HH:MM"
@@ -573,21 +573,21 @@ const TaskItem = memo(function TaskItem({
                   <div className="flex items-center gap-2">
                     <input
                       type="date"
-                      value={task.lembrete_em ? new Date(task.lembrete_em).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(0, 10) : ""}
+                      value={task.lembrete_em ? (() => { const d = new Date(new Date(task.lembrete_em).getTime() - 3*60*60*1000); return d.toISOString().slice(0,10); })() : ""}
                       onChange={(e) => {
                         if (!e.target.value) { onUpdate({ id: task.id, lembrete_em: null, lembrete_enviado_em: null }); return; }
-                        const hora = task.lembrete_em ? new Date(task.lembrete_em).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(11, 16) : "08:00";
-                        onUpdate({ id: task.id, lembrete_em: new Date(`${e.target.value}T${hora}:00-03:00`).toISOString(), lembrete_enviado_em: null });
+                        const horaAtual = task.lembrete_em ? (() => { const d = new Date(new Date(task.lembrete_em).getTime() - 3*60*60*1000); return d.toISOString().slice(11,16); })() : "08:00";
+                        onUpdate({ id: task.id, lembrete_em: new Date(e.target.value + "T" + horaAtual + ":00-03:00").toISOString(), lembrete_enviado_em: null });
                       }}
                       className="flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                     />
                     <input
                       type="time"
-                      value={task.lembrete_em ? new Date(task.lembrete_em).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(11, 16) : ""}
+                      value={task.lembrete_em ? (() => { const d = new Date(new Date(task.lembrete_em).getTime() - 3*60*60*1000); return d.toISOString().slice(11,16); })() : ""}
                       onChange={(e) => {
                         if (!task.lembrete_em || !e.target.value) return;
-                        const data = new Date(task.lembrete_em).toLocaleString('sv-SE', { timeZone: 'America/Sao_Paulo' }).slice(0, 10);
-                        onUpdate({ id: task.id, lembrete_em: new Date(`${data}T${e.target.value}:00-03:00`).toISOString(), lembrete_enviado_em: null });
+                        const dataAtual = (() => { const d = new Date(new Date(task.lembrete_em).getTime() - 3*60*60*1000); return d.toISOString().slice(0,10); })();
+                        onUpdate({ id: task.id, lembrete_em: new Date(dataAtual + "T" + e.target.value + ":00-03:00").toISOString(), lembrete_enviado_em: null });
                       }}
                       disabled={!task.lembrete_em}
                       placeholder="HH:MM"
