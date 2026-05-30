@@ -539,23 +539,34 @@ const TaskItem = memo(function TaskItem({
                 <div className="sm:col-span-2">
                   <label className="text-muted-foreground text-[11px] font-medium block mb-1">Data e hora de vencimento</label>
                   <div className="flex items-center gap-2">
-                    <input
-                      type="date"
-                      value={task.data_vencimento ? (() => { const d = new Date(new Date(task.data_vencimento).getTime() - 3*60*60*1000); return d.toISOString().slice(0,10); })() : ""}
-                      onChange={(e) => {
-                        if (!e.target.value) { onUpdate({ id: task.id, data_vencimento: null }); return; }
-                        const horaAtual = task.data_vencimento ? (() => { const d = new Date(new Date(task.data_vencimento).getTime() - 3*60*60*1000); return d.toISOString().slice(11,16); })() : "00:00";
-                        onUpdate({ id: task.id, data_vencimento: new Date(e.target.value + "T" + horaAtual + ":00-03:00").toISOString() });
-                      }}
-                      className="flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className={cn("flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-left flex items-center gap-1.5 focus:outline-none focus:ring-1 focus:ring-ring", !task.data_vencimento && "text-muted-foreground")}>
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          {task.data_vencimento ? format(new Date(new Date(task.data_vencimento).getTime() - 3*60*60*1000), "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={task.data_vencimento ? new Date(new Date(task.data_vencimento).getTime() - 3*60*60*1000) : undefined}
+                          onSelect={(date) => {
+                            if (!date) { onUpdate({ id: task.id, data_vencimento: null }); return; }
+                            const horaAtual = task.data_vencimento ? (() => { const d = new Date(new Date(task.data_vencimento).getTime() - 3*60*60*1000); return d.toISOString().slice(11,16); })() : "00:00";
+                            const dateStr = format(date, "yyyy-MM-dd");
+                            onUpdate({ id: task.id, data_vencimento: new Date(dateStr + "T" + horaAtual + ":00-03:00").toISOString() });
+                          }}
+                          initialFocus locale={ptBR} className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <input
                       type="time"
                       value={task.data_vencimento ? (() => { const d = new Date(new Date(task.data_vencimento).getTime() - 3*60*60*1000); return d.toISOString().slice(11,16); })() : ""}
                       onChange={(e) => {
                         if (!task.data_vencimento || !e.target.value) return;
-                        const dataAtual = (() => { const d = new Date(new Date(task.data_vencimento).getTime() - 3*60*60*1000); return d.toISOString().slice(0,10); })();
-                        onUpdate({ id: task.id, data_vencimento: new Date(dataAtual + "T" + e.target.value + ":00-03:00").toISOString() });
+                        const dataStr = format(new Date(new Date(task.data_vencimento).getTime() - 3*60*60*1000), "yyyy-MM-dd");
+                        onUpdate({ id: task.id, data_vencimento: new Date(dataStr + "T" + e.target.value + ":00-03:00").toISOString() });
                       }}
                       disabled={!task.data_vencimento}
                       placeholder="HH:MM"
@@ -571,23 +582,34 @@ const TaskItem = memo(function TaskItem({
                 <div className="sm:col-span-2">
                   <label className="text-muted-foreground text-[11px] font-medium block mb-1">⏰ Lembrete</label>
                   <div className="flex items-center gap-2">
-                    <input
-                      type="date"
-                      value={task.lembrete_em ? (() => { const d = new Date(new Date(task.lembrete_em).getTime() - 3*60*60*1000); return d.toISOString().slice(0,10); })() : ""}
-                      onChange={(e) => {
-                        if (!e.target.value) { onUpdate({ id: task.id, lembrete_em: null, lembrete_enviado_em: null }); return; }
-                        const horaAtual = task.lembrete_em ? (() => { const d = new Date(new Date(task.lembrete_em).getTime() - 3*60*60*1000); return d.toISOString().slice(11,16); })() : "08:00";
-                        onUpdate({ id: task.id, lembrete_em: new Date(e.target.value + "T" + horaAtual + ":00-03:00").toISOString(), lembrete_enviado_em: null });
-                      }}
-                      className="flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button className={cn("flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-left flex items-center gap-1.5 focus:outline-none focus:ring-1 focus:ring-ring", !task.lembrete_em && "text-muted-foreground")}>
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          {task.lembrete_em ? format(new Date(new Date(task.lembrete_em).getTime() - 3*60*60*1000), "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <CalendarComponent
+                          mode="single"
+                          selected={task.lembrete_em ? new Date(new Date(task.lembrete_em).getTime() - 3*60*60*1000) : undefined}
+                          onSelect={(date) => {
+                            if (!date) { onUpdate({ id: task.id, lembrete_em: null, lembrete_enviado_em: null }); return; }
+                            const horaAtual = task.lembrete_em ? (() => { const d = new Date(new Date(task.lembrete_em).getTime() - 3*60*60*1000); return d.toISOString().slice(11,16); })() : "08:00";
+                            const dateStr = format(date, "yyyy-MM-dd");
+                            onUpdate({ id: task.id, lembrete_em: new Date(dateStr + "T" + horaAtual + ":00-03:00").toISOString(), lembrete_enviado_em: null });
+                          }}
+                          initialFocus locale={ptBR} className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <input
                       type="time"
                       value={task.lembrete_em ? (() => { const d = new Date(new Date(task.lembrete_em).getTime() - 3*60*60*1000); return d.toISOString().slice(11,16); })() : ""}
                       onChange={(e) => {
                         if (!task.lembrete_em || !e.target.value) return;
-                        const dataAtual = (() => { const d = new Date(new Date(task.lembrete_em).getTime() - 3*60*60*1000); return d.toISOString().slice(0,10); })();
-                        onUpdate({ id: task.id, lembrete_em: new Date(dataAtual + "T" + e.target.value + ":00-03:00").toISOString(), lembrete_enviado_em: null });
+                        const dataStr = format(new Date(new Date(task.lembrete_em).getTime() - 3*60*60*1000), "yyyy-MM-dd");
+                        onUpdate({ id: task.id, lembrete_em: new Date(dataStr + "T" + e.target.value + ":00-03:00").toISOString(), lembrete_enviado_em: null });
                       }}
                       disabled={!task.lembrete_em}
                       placeholder="HH:MM"
