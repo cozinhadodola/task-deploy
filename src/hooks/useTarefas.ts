@@ -10,6 +10,9 @@ export type Tarefa = {
   lista_id: string | null;
   responsavel: string | null;
   data_vencimento: string | null;
+  lembrete_em: string | null;
+  lembrete_enviado_em: string | null;
+  notificado_em: string | null;
   periodicidade: string | null;
   dia_recorrencia: string | null;
   hora_recorrencia: string | null;
