@@ -6,7 +6,17 @@ export type Lista = {
   nome: string;
   ordem: number | null;
   created_at: string | null;
+  waha_session: string | null;
 };
+
+export const WAHA_SESSIONS = [
+  "cozinha01",
+  "cozinha02",
+  "cozinha03",
+  "cozinha04",
+  "andredola",
+  "Usiminas",
+];
 
 export function useListas() {
   return useQuery({
@@ -36,6 +46,20 @@ export function useCreateLista() {
         .single();
       if (error) throw error;
       return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["listas"] }),
+  });
+}
+
+export function useUpdateLista() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, waha_session }: { id: string; waha_session: string | null }) => {
+      const { error } = await supabase
+        .from("task_listas" as any)
+        .update({ waha_session } as any)
+        .eq("id", id);
+      if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["listas"] }),
   });
