@@ -1,0 +1,1 @@
+ALTER TABLE public.task_listas ADD COLUMN IF NOT EXISTS waha_session TEXT;
