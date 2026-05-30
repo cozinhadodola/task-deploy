@@ -32,13 +32,11 @@ export function useTarefas(listaId: string | null) {
         .order("data_vencimento", { ascending: true, nullsFirst: false })
         .order("ordem", { ascending: true })
         .order("created_at", { ascending: false });
-
       if (listaId) {
         query = query.eq("lista_id", listaId);
       } else {
         query = query.is("lista_id", null);
       }
-
       const { data, error } = await query;
       if (error) throw error;
       return (data as unknown) as Tarefa[];
@@ -93,7 +91,23 @@ export function useUpdateTarefa() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["tarefas"] }),
+    // Optimistic update: atualiza o cache imediatamente sem esperar a API
+    onMutate: async (newData) => {
+      await qc.cancelQueries({ queryKey: ["tarefas"] });
+      const snapshots = qc.getQueriesData<Tarefa[]>({ queryKey: ["tarefas"] });
+      qc.setQueriesData<Tarefa[]>({ queryKey: ["tarefas"] }, (old) => {
+        if (!Array.isArray(old)) return old;
+        return old.map((t) => t.id === newData.id ? { ...t, ...newData } : t);
+      });
+      return { snapshots };
+    },
+    onError: (_err, _vars, context: any) => {
+      // Rollback em caso de erro
+      context?.snapshots?.forEach(([queryKey, data]: any) => {
+        qc.setQueryData(queryKey, data);
+      });
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["tarefas"] }),
   });
 }
 
