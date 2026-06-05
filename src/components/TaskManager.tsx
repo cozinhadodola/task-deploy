@@ -524,11 +524,13 @@ const TaskItem = memo(function TaskItem({
                   </select>
                 </div>
                 <div>
-                  <label className="text-muted-foreground text-[11px] font-medium block mb-1">Responsável</label>
+                  <label className={cn("text-[11px] font-medium block mb-1", task.lembrete_em && !task.responsavel ? "text-destructive" : "text-muted-foreground")}>
+                    Responsável{task.lembrete_em && !task.responsavel && " *"}
+                  </label>
                   <select
                     value={task.responsavel || ""}
                     onChange={(e) => onUpdate({ id: task.id, responsavel: e.target.value || null })}
-                    className="w-full bg-background border border-border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    className={cn("w-full bg-background border rounded-md px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring", task.lembrete_em && !task.responsavel ? "border-destructive ring-1 ring-destructive" : "border-border")}
                   >
                     <option value="">Nenhum</option>
                     {responsaveis.map((r) => (
@@ -584,7 +586,10 @@ const TaskItem = memo(function TaskItem({
                   <div className="flex items-center gap-2">
                     <Popover>
                       <PopoverTrigger asChild>
-                        <button className={cn("flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-left flex items-center gap-1.5 focus:outline-none focus:ring-1 focus:ring-ring", !task.lembrete_em && "text-muted-foreground")}>
+                        <button
+                          title={!task.responsavel ? "Defina um responsável antes de configurar o lembrete" : undefined}
+                          disabled={!task.responsavel}
+                          className={cn("flex-1 bg-background border border-border rounded-md px-2 py-1.5 text-xs text-left flex items-center gap-1.5 focus:outline-none focus:ring-1 focus:ring-ring", !task.lembrete_em && "text-muted-foreground", !task.responsavel && "opacity-40 cursor-not-allowed")}>
                           <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           {task.lembrete_em ? format(new Date(new Date(task.lembrete_em).getTime() - 3*60*60*1000), "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
                         </button>
