@@ -1,6 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+// Normaliza a grafia do status vinda do banco para um valor canônico.
+// A coluna é texto livre e historicamente acumulou variantes (ex.: "concluido"
+// sem acento). Como o app compara com "concluído" (com acento), qualquer variante
+// não normalizada apareceria como card ativo "fantasma" no quadro.
+export function normStatus(v: string | null | undefined): string | null {
+  if (v == null) return v;
+  const s = String(v).trim().toLowerCase();
+  if (["concluido", "concluído", "concluida", "concluída", "feito", "done"].includes(s)) return "concluído";
+  if (["em andamento", "andamento", "em-andamento", "fazendo"].includes(s)) return "em andamento";
+  if (["pendente", "a fazer", "nao iniciado", "não iniciado"].includes(s)) return "pendente";
+  return String(v).trim();
+}
+
+const withNormStatus = (rows: Tarefa[]): Tarefa[] =>
+  rows.map((t) => ({ ...t, status: normStatus(t.status) }));
+
 export type Tarefa = {
   id: string;
   titulo: string;
@@ -41,7 +57,7 @@ export function useTarefas(listaId: string | null) {
       }
       const { data, error } = await query;
       if (error) throw error;
-      return (data as unknown) as Tarefa[];
+      return withNormStatus((data as unknown) as Tarefa[]);
     },
     staleTime: 2 * 60 * 1000,
   });
@@ -59,7 +75,7 @@ export function useAllTarefas() {
         .order("ordem", { ascending: true })
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data as unknown) as Tarefa[];
+      return withNormStatus((data as unknown) as Tarefa[]);
     },
     staleTime: 2 * 60 * 1000,
   });
