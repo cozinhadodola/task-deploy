@@ -113,6 +113,34 @@ function getNextRecurrenceDate(rec: Recorrencia): string | null {
   return null;
 }
 
+/* ─── Ordem das tarefas na coluna (a mesma usada ao arrastar) ─── */
+const PRIORITY_RANK: Record<string, number> = { alta: 0, média: 1, baixa: 2 };
+
+function makeTaskSorter(recorrenciaMap: Map<string, Recorrencia>) {
+  const getEffectiveDate = (t: Tarefa): string | null => {
+    if (t.data_vencimento) return t.data_vencimento.slice(0, 10); // compare by date only
+    const rec = recorrenciaMap.get(t.id);
+    if (rec) return getNextRecurrenceDate(rec);
+    return null;
+  };
+
+  return (a: Tarefa, b: Tarefa) => {
+    // Prioridade primeiro (alta → média → baixa → sem prioridade)
+    const prioA = a.prioridade ? (PRIORITY_RANK[a.prioridade] ?? 3) : 3;
+    const prioB = b.prioridade ? (PRIORITY_RANK[b.prioridade] ?? 3) : 3;
+    if (prioA !== prioB) return prioA - prioB;
+    // Mesma prioridade: ordena por data crescente
+    const dateA = getEffectiveDate(a);
+    const dateB = getEffectiveDate(b);
+    if (!dateA && !dateB) return (a.ordem ?? 0) - (b.ordem ?? 0);
+    if (!dateA) return 1;
+    if (!dateB) return -1;
+    const diff = dateA.localeCompare(dateB);
+    if (diff !== 0) return diff;
+    return (a.ordem ?? 0) - (b.ordem ?? 0);
+  };
+}
+
 /* ─── Relative date formatting ─── */
 function formatRelativeDate(dateStr: string): { text: string; isOverdue: boolean; isToday: boolean } {
   const dueDate = new Date(dateStr);
@@ -718,30 +746,7 @@ const ListColumn = memo(function ListColumn({
 
   const filtered = filterResponsavel ? tarefas.filter((t) => t.responsavel === filterResponsavel) : tarefas;
   
-  const getEffectiveDate = (t: Tarefa): string | null => {
-    if (t.data_vencimento) return t.data_vencimento.slice(0, 10); // compare by date only
-    const rec = recorrenciaMap.get(t.id);
-    if (rec) return getNextRecurrenceDate(rec);
-    return null;
-  };
-
-  const PRIORITY_RANK: Record<string, number> = { alta: 0, média: 1, baixa: 2 };
-
-  const sortByDate = (a: Tarefa, b: Tarefa) => {
-    // Prioridade primeiro (alta → média → baixa → sem prioridade)
-    const prioA = a.prioridade ? (PRIORITY_RANK[a.prioridade] ?? 3) : 3;
-    const prioB = b.prioridade ? (PRIORITY_RANK[b.prioridade] ?? 3) : 3;
-    if (prioA !== prioB) return prioA - prioB;
-    // Mesma prioridade: ordena por data crescente
-    const dateA = getEffectiveDate(a);
-    const dateB = getEffectiveDate(b);
-    if (!dateA && !dateB) return (a.ordem ?? 0) - (b.ordem ?? 0);
-    if (!dateA) return 1;
-    if (!dateB) return -1;
-    const diff = dateA.localeCompare(dateB);
-    if (diff !== 0) return diff;
-    return (a.ordem ?? 0) - (b.ordem ?? 0);
-  };
+  const sortByDate = makeTaskSorter(recorrenciaMap);
   const pending = filtered.filter((t) => t.status !== "concluído").sort(sortByDate);
   const done = filtered.filter((t) => t.status === "concluído").sort(sortByDate);
   const visiblePending = pending.slice(0, visibleCount);
@@ -1176,17 +1181,22 @@ export default function TaskManager() {
   }, [allRecorrencias, allTarefas]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
+  // mutate é estável entre renders (o objeto da mutation não é): mantém o memo dos itens.
+  const { mutate: mutateUpdate } = updateTarefa;
+  const { mutate: mutateDelete } = deleteTarefa;
+  const { mutate: mutateCreate } = createTarefa;
+
   const handleUpdateTask = useCallback((data: Partial<Tarefa> & { id: string }) => {
-    updateTarefa.mutate(data);
-  }, [updateTarefa]);
+    mutateUpdate(data);
+  }, [mutateUpdate]);
 
   const handleDeleteTask = useCallback((id: string) => {
-    deleteTarefa.mutate(id);
-  }, [deleteTarefa]);
+    mutateDelete(id);
+  }, [mutateDelete]);
 
   const handleCreateTask = useCallback((tarefa: Partial<Tarefa> & { titulo: string }) => {
-    createTarefa.mutate(tarefa);
-  }, [createTarefa]);
+    mutateCreate(tarefa);
+  }, [mutateCreate]);
 
 
   const isAllView = selectedListaId === null;
@@ -1239,28 +1249,33 @@ export default function TaskManager() {
       const sourceListId = source.droppableId === "__no_list__" ? null : source.droppableId;
       const destListId = destination.droppableId === "__no_list__" ? null : destination.droppableId;
 
-      const sourceTasks = allTarefas
-        .filter((t) => t.lista_id === sourceListId && t.status !== "concluído")
-        .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
+      // Mesmo recorte e mesma ordem que a coluna mostra: os índices do arrasto
+      // são posições na tela.
+      const sortTasks = makeTaskSorter(recorrenciaMap);
+      const visibleTasks = (listId: string | null) =>
+        allTarefas
+          .filter((t) => t.lista_id === listId && t.status !== "concluído")
+          .filter((t) => !filterResponsavel || t.responsavel === filterResponsavel)
+          .sort(sortTasks);
+      const changedOrder = (tasks: Tarefa[]) =>
+        tasks.map((t, i) => ({ id: t.id, ordem: i, moved: t.ordem !== i })).filter((u) => u.moved).map(({ id, ordem }) => ({ id, ordem }));
+
+      const sourceTasks = visibleTasks(sourceListId);
 
       if (sourceListId === destListId) {
-        const reordered = Array.from(sourceTasks);
-        const [moved] = reordered.splice(source.index, 1);
-        reordered.splice(destination.index, 0, moved);
-        reorderTarefas.mutate(reordered.map((t, i) => ({ id: t.id, ordem: i })));
+        const [moved] = sourceTasks.splice(source.index, 1);
+        sourceTasks.splice(destination.index, 0, moved);
+        const updates = changedOrder(sourceTasks);
+        if (updates.length) reorderTarefas.mutate(updates);
       } else {
-        const destTasks = allTarefas
-          .filter((t) => t.lista_id === destListId && t.status !== "concluído")
-          .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));
-
+        const destTasks = visibleTasks(destListId);
         const [moved] = sourceTasks.splice(source.index, 1);
         destTasks.splice(destination.index, 0, moved);
 
-        const updates = [
-          ...sourceTasks.map((t, i) => ({ id: t.id, ordem: i })),
-          ...destTasks.map((t, i) => ({ id: t.id, ordem: i, lista_id: destListId })),
-        ];
-        reorderTarefas.mutate(updates);
+        reorderTarefas.mutate([
+          ...changedOrder(sourceTasks),
+          ...destTasks.map((t, i) => ({ id: t.id, ordem: i, lista_id: destListId })).filter((u, i) => u.id === moved.id || destTasks[i].ordem !== i),
+        ]);
       }
     }
   };

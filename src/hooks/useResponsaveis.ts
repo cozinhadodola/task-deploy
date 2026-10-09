@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { cachedInitial, writeCache } from "@/lib/localCache";
 
 export type Responsavel = {
   id: string;
@@ -20,8 +21,10 @@ export function useResponsaveis() {
         .select("*")
         .order("nome", { ascending: true });
       if (error) throw error;
+      writeCache("responsaveis", data);
       return (data as unknown) as Responsavel[];
     },
+    ...cachedInitial<Responsavel[]>("responsaveis"),
   });
 }
 

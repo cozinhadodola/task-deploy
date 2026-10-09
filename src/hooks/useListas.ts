@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { cachedInitial, writeCache } from "@/lib/localCache";
 
 export type Lista = {
   id: string;
@@ -7,6 +8,7 @@ export type Lista = {
   ordem: number | null;
   created_at: string | null;
   waha_session: string | null;
+  owner_id: string | null;
 };
 
 export const WAHA_SESSIONS = [
@@ -28,9 +30,11 @@ export function useListas() {
         .order("ordem", { ascending: true })
         .order("created_at", { ascending: true });
       if (error) throw error;
+      writeCache("listas", data);
       return (data as unknown) as Lista[];
     },
     staleTime: 2 * 60 * 1000,
+    ...cachedInitial<Lista[]>("listas"),
   });
 }
 

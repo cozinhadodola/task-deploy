@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { cachedInitial, writeCache } from "@/lib/localCache";
 
 export type Recorrencia = {
   id: string;
@@ -26,8 +27,10 @@ export function useAllRecorrencias() {
         .from("task_recorrencias" as any)
         .select("*");
       if (error) throw error;
+      writeCache("recorrencias", data);
       return (data as unknown) as Recorrencia[];
     },
+    ...cachedInitial<Recorrencia[]>("recorrencias"),
   });
 }
 

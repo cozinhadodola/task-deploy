@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useListas } from "@/hooks/useListas";
 
 export type Permissao = "leitura" | "edicao";
 
@@ -30,26 +31,17 @@ export function useCurrentUser() {
   return useQuery({
     queryKey: ["current_user"],
     queryFn: async () => {
-      const { data } = await supabase.auth.getUser();
-      return data.user;
+      // getSession lê a sessão guardada no aparelho; getUser iria ao servidor.
+      const { data } = await supabase.auth.getSession();
+      return data.session?.user ?? null;
     },
   });
 }
 
+// O dono já vem junto com as listas: não precisa de uma consulta por coluna.
 export function useListaOwner(listaId: string | null) {
-  return useQuery({
-    queryKey: ["lista_owner", listaId],
-    enabled: !!listaId,
-    queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("task_listas")
-        .select("owner_id")
-        .eq("id", listaId)
-        .single();
-      if (error) throw error;
-      return data?.owner_id as string | null;
-    },
-  });
+  const { data: listas } = useListas();
+  return { data: listas?.find((l) => l.id === listaId)?.owner_id ?? null };
 }
 
 export function useAddPermissao() {
